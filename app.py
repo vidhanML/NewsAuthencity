@@ -2,7 +2,7 @@ import re
 import math
 import joblib
 import streamlit as st
-import numpy
+import numpy as np
 # --- Standard Page Setup ---
 st.set_page_config(
     page_title="News Checker AI", 
