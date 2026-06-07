@@ -72,7 +72,7 @@ if page_choice == "Fake News Detector":
             cleaned_text = clean_leakage_text(user_input)
             vector_input = vectorizer.transform([cleaned_text])
             
-            decision_score = clf.decision_function(vector_input)
+            decision_score = float(clf.decision_function(vector_input)[0])
             probability = 1 / (1 + math.exp(-decision_score))
             
             prediction = clf.predict(vector_input)
