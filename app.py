@@ -2,8 +2,8 @@ import re
 import math
 import joblib
 import streamlit as st
-import numpy as np
-# --- Standard Page Setup ---
+import pandas as pd
+
 st.set_page_config(
     page_title="News Checker AI", 
     page_icon="📰", 
@@ -11,7 +11,6 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# --- Sidebar Navigation Menu (Always Readable) ---
 with st.sidebar:
     st.title("🧭 Navigation")
     page_choice = st.selectbox(
@@ -24,7 +23,6 @@ with st.sidebar:
     st.write("📚 **Dataset Size:** 45,757 Articles")
 
 
-# --- VIEW 1: DETECTOR APPLICATION ---
 if page_choice == "Fake News Detector":
     st.title("📰 Fake News Detector")
     st.write("Paste a news article below to check if it is real or fake.")
@@ -56,7 +54,6 @@ if page_choice == "Fake News Detector":
         text = re.sub(r'\s+', ' ', text).strip()
         return text
 
-    # Form layout with clean, centered design alignment
     with st.form("classification_form"):
         user_input = st.text_area(
             label="Article Text", 
@@ -64,7 +61,6 @@ if page_choice == "Fake News Detector":
             placeholder="Paste your news story here..."
         )
         
-        # Using columns to put the button perfectly in the middle row
         c1, c2, c3 = st.columns([2, 1, 2])
         with c2:
             submit_button = st.form_submit_button(label="CHECK ARTICLE", use_container_width=True)
@@ -76,9 +72,8 @@ if page_choice == "Fake News Detector":
             cleaned_text = clean_leakage_text(user_input)
             vector_input = vectorizer.transform([cleaned_text])
             
-            decision_score = clf.decision_function(vector_input)[0]
-            probability = 1 / (1 + np.exp(-decision_score))
-
+            decision_score = clf.decision_function(vector_input)
+            probability = 1 / (1 + math.exp(-decision_score))
             
             prediction = clf.predict(vector_input)
             is_real = (prediction == 1 or str(prediction).lower() == 'real')
@@ -104,8 +99,36 @@ if page_choice == "Fake News Detector":
                     st.progress(confidence_score)
                     st.write("How sure the AI is about this result.")
 
+            st.markdown("---")
+            st.subheader("🔍 Key Phrases Driving this Prediction")
+            
+            feature_names = vectorizer.get_feature_names_out()
+            weights = clf.coef_[0]
+            user_word_indices = vector_input.nonzero()[1]
 
-# --- VIEW 2: IMPORTANCE INFORMATION PAGE ---
+            if len(user_word_indices) > 0:
+                word_analysis = []
+                for idx in user_word_indices:
+                    word = feature_names[idx]
+                    weight = weights[idx]
+                    impact = vector_input[0, idx] * weight
+                    word_analysis.append({"Word": word, "Impact": impact})
+                    
+                df_words = pd.DataFrame(word_analysis)
+                df_words = df_words.sort_values(by="Impact", key=abs, ascending=False).head(5)
+                
+                def get_influence_label(val):
+                    if val > 0.01: return "🟢 Strongly Signals Real News"
+                    elif val > 0: return "🍏 Weakly Signals Real News"
+                    elif val < -0.01: return "🔴 Strongly Signals Fake News"
+                    else: return "🍎 Weakly Signals Fake News"
+                    
+                df_words["Influence"] = df_words["Impact"].apply(get_influence_label)
+                df_display = df_words[["Word", "Influence"]].reset_index(drop=True)
+                st.table(df_display)
+            else:
+                st.info("The text provided contains too many common filler words for specific keyword analysis.")
+
 else:
     st.title("🌱 Why Real News Matters")
     st.write("In a world full of information, keeping news honest and factual keeps our society running safely.")
@@ -118,7 +141,7 @@ else:
             st.subheader("🤝 1. It Builds Social Trust")
             st.write("When people can trust what they read, they feel safer talking with their neighbors. Honest news brings communities closer together.")
         
-        st.write("") # spacing
+        st.write("")
         
         with st.container(border=True):
             st.subheader("🏥 2. It Keeps Communities Safe")
@@ -129,12 +152,11 @@ else:
             st.subheader("🗳️ 3. It Helps Us Make Smart Choices")
             st.write("Whether deciding on local rules or choosing leaders, families need real facts to make the best possible daily choices.")
         
-        st.write("") # spacing
+        st.write("")
         
         with st.container(border=True):
             st.subheader("🛡️ 4. It Protects True History")
             st.write("Real journalism acts as a diary for our world. By writing down what actually happened, it keeps historical records accurate.")
 
-# --- Signature Line ---
 st.write("---")
 st.markdown("<p style='text-align: center; color: gray;'>Made with ♡ by Vidhan</p>", unsafe_allow_html=True)
