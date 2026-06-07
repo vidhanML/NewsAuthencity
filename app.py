@@ -2,7 +2,7 @@ import re
 import math
 import joblib
 import streamlit as st
-
+import numpy
 # --- Standard Page Setup ---
 st.set_page_config(
     page_title="News Checker AI", 
@@ -76,8 +76,9 @@ if page_choice == "Fake News Detector":
             cleaned_text = clean_leakage_text(user_input)
             vector_input = vectorizer.transform([cleaned_text])
             
-            decision_score = clf.decision_function(vector_input)
-            probability = 1 / (1 + math.exp(-decision_score))
+            decision_score = clf.decision_function(vector_input)[0]
+            probability = 1 / (1 + np.exp(-decision_score))
+
             
             prediction = clf.predict(vector_input)
             is_real = (prediction == 1 or str(prediction).lower() == 'real')
